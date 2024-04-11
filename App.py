@@ -7,28 +7,44 @@ import numpy as np
 from skimage import measure
 import sympy as sp
 
+# Check for GPU availability
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 # Load the pre-trained model
-model = CNN(num_classes=14)  # Assuming 14 classes for equations
-model.load_state_dict(torch.load('math_symbol_classifier.pth', map_location=torch.device('cpu')))  # Load the model weights
+model = CNN(num_classes=21)  # Assuming 14 classes for equations
+model.load_state_dict(torch.load('HandwrittenEquationRecognizer/math_symbol_classifier_v2.pth', map_location=device))  # Load the model weights
 model.eval()
 
 # Define label mapping
 LABEL_MAP = {
-    '0': '0',
-    '1': '1',
-    '2': '2',
-    '3': '3',
-    '4': '4',
-    '5': '5',
-    '6': '6',
-    '7': '7',
-    '8': '8',
-    '9': '9',
-    '10': 'dot',
-    '11': 'minus',
-    '12': 'plus',
-    '13': 'slash'
+    'dot': '10',
+    'minus': '11',
+    'plus': '12',
+    'slash': '13',
+    'div': '14',
+    'equal': '15',
+    'times': '16',
+    'w': '17',
+    'x': '18',
+    'y': '19',
+    'z': '20' 
 }
+# LABEL_MAP = {
+#     '0': '0',
+#     '1': '1',
+#     '2': '2',
+#     '3': '3',
+#     '4': '4',
+#     '5': '5',
+#     '6': '6',
+#     '7': '7',
+#     '8': '8',
+#     '9': '9',
+#     '10': 'dot',
+#     '11': 'minus',
+#     '12': 'plus',
+#     '13': 'slash'
+# }
 
 # Function to preprocess and classify an image
 def classify_image(image):
@@ -45,13 +61,21 @@ def classify_image(image):
         output = model(image_tensor)
 
     _, predicted = torch.max(output, 1)
-    predicted_label = str(predicted.item())
-    predicted_class = LABEL_MAP.get(predicted_label, 'Unknown')
+    # predicted_label = str(predicted.item())
+    # predicted_class = LABEL_MAP.get(predicted_label, 'Unknown')
+    predicted_label = predicted.item()
+    
+    idx_map = {int(idx): lbl for lbl, idx in LABEL_MAP.items()}
+    # Map the predicted label to the corresponding class
+    if predicted_label < 10:
+        predicted_class = predicted_label
+    else:
+        predicted_class = idx_map[predicted_label]
 
     # Get confidence scores
     confidence_scores = torch.softmax(output, dim=1).squeeze().numpy()
 
-    return predicted_class, confidence_scores
+    return str(predicted_class), confidence_scores
 
 # Function to recognize the handwritten equation
 def recognize_equation(image):
@@ -98,6 +122,13 @@ def make_equation(symbols):
         'minus': '-',
         'plus': '+',
         'slash': '/',
+        'div': '\\div',
+        'equal': '=',
+        'times': '\times',
+        'w': 'w',
+        'x': 'x',
+        'y': 'y',
+        'z': 'z',
         '0': '0',
         '1': '1',
         '2': '2',
